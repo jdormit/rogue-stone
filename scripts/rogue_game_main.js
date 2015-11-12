@@ -1,3 +1,4 @@
+var FPS = 60;
 var seed = Date.now();
 
 var color_map = {
@@ -26,8 +27,10 @@ var dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(le
 var render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
 grid_copy(render_grid,level_grid);
 
+var player = new Player();
+
 run_game(); //run the game loop once to initialize the level
-window.setInterval(player_input(), 1000/60); //game loops at 60 fps
+window.setInterval(player.player_input(), 1000/FPS); //game loops at 60 fps
 
 function run_game() { //the main game loop, runs whenever the player makes a move
 	calculate_level();
@@ -57,44 +60,47 @@ function draw_game() {
 	}
 }
 
-function player_input() {
-	window.addEventListener("keydown", function(event) {
-		event.preventDefault();
-		if ((event.keyCode == '37' || event.keyCode == '100') && playerX > 0) { //left arrow and numpad 4
-			update_player_pos(-1, 0);
-		}
-		else if ((event.keyCode == '39' || event.keyCode == '102') && playerX < level_grid.length - 1) { //right arrow and numpad 6
-			update_player_pos(1,0);
-		}
-		else if ((event.keyCode == '38' || event.keyCode == '104') && playerY > 0) { //up arrow and numpad 8
-			update_player_pos(0,-1);
-		}
-		else if ((event.keyCode == '40' || event.keyCode == '98') && playerY < level_grid[0].length - 1) { //down arrow and numpad 2
-			update_player_pos(0,1);
-		}
-		else if (event.keyCode == '36' && playerX > 0 && playerY > 0) { //numpad 7
-			update_player_pos(-1,-1);
-		}
-		else if (event.keyCode == '35' && playerX > 0 && playerY < level_grid[0].length - 1) { //numpad 1
-			update_player_pos(-1,1);
-		}
-		else if (event.keyCode == '33' && playerX < level_grid.length - 1 && playerY > 0) { //numpad 9
-			update_player_pos(1,-1);
-		}
-		else if (event.keyCode == '34' && playerX < level_grid.length - 1 && playerY < level_grid[0].length - 1) { //numpad 3
-			update_player_pos(1,1);
-		}
-		else if (event.keyCode == '32') { //spacebar to reset the dungeon
-			playerX = Math.round(level_width/2);
-			playerY = Math.round(level_height/2);
-			seed = Date.now();
-			dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2));
-			render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
-			grid_copy(render_grid,level_grid);
-		}
-		run_game();
-	});
+function Player() {
+	this.player_input = function() {
+		window.addEventListener("keydown", function(event) {
+			event.preventDefault();
+			if ((event.keyCode == '37' || event.keyCode == '100') && playerX > 0) { //left arrow and numpad 4
+				update_player_pos(-1, 0);
+			}
+			else if ((event.keyCode == '39' || event.keyCode == '102') && playerX < level_grid.length - 1) { //right arrow and numpad 6
+				update_player_pos(1,0);
+			}
+			else if ((event.keyCode == '38' || event.keyCode == '104') && playerY > 0) { //up arrow and numpad 8
+				update_player_pos(0,-1);
+			}
+			else if ((event.keyCode == '40' || event.keyCode == '98') && playerY < level_grid[0].length - 1) { //down arrow and numpad 2
+				update_player_pos(0,1);
+			}
+			else if (event.keyCode == '36' && playerX > 0 && playerY > 0) { //numpad 7
+				update_player_pos(-1,-1);
+			}
+			else if (event.keyCode == '35' && playerX > 0 && playerY < level_grid[0].length - 1) { //numpad 1
+				update_player_pos(-1,1);
+			}
+			else if (event.keyCode == '33' && playerX < level_grid.length - 1 && playerY > 0) { //numpad 9
+				update_player_pos(1,-1);
+			}
+			else if (event.keyCode == '34' && playerX < level_grid.length - 1 && playerY < level_grid[0].length - 1) { //numpad 3
+				update_player_pos(1,1);
+			}
+			else if (event.keyCode == '32') { //spacebar to reset the dungeon
+				playerX = Math.round(level_width/2);
+				playerY = Math.round(level_height/2);
+				seed = Date.now();
+				dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2));
+				render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
+				grid_copy(render_grid,level_grid);
+			}
+			run_game();
+		});
+	}	
 }
+
 
 function update_player_pos(xchange,ychange) { //this function checks if the player can move the specified increment and performs the move if true
 	if (level_grid[playerX+xchange][playerY+ychange] == map_chars["floor"] || 
