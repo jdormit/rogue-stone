@@ -6,12 +6,11 @@ var draw_entities = { //stores all entities that must be rendered
 };
 
 var entity_chars = {
-//	"player":'@'
+
 };
 
 var color_map = {
 	"default":"#BDDEFF",
-//	"player":"rgb(190,110,0)"
 };
 var pix_width = 12;
 var font_size = pix_width+"px";
