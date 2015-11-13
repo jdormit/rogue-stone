@@ -1,13 +1,9 @@
 var FPS = 60;
 var seed = Date.now();
 
-var draw_entities = { //stores all entities that must be rendered
-	
-};
+var draw_entities = {}; //stores all entities that must be rendered
 
-var entity_chars = {
-
-};
+var entity_chars = {};
 
 var color_map = {
 	"default":"#BDDEFF",
