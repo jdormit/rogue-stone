@@ -1,3 +1,5 @@
+var USE_FOV = true;
+
 var FPS = 60;
 var seed = Date.now();
 
@@ -28,24 +30,46 @@ grid_copy(render_grid,level_grid);
 
 var player = new Player();
 
-run_game(); //run the game loop once to initialize the level
-window.setInterval(player_input(), 1000/FPS); //game loops at 60 fps
-
 function run_game() { //the main game loop, runs whenever the player makes a move
 	calculate_level();
 	draw_game();
 }
 
 function calculate_level() {
-	//level_grid = render_grid;
 	for (var i = 0; i<level_grid.length; i++) {
 		for (var j = 0; j<level_grid[0].length; j++) {
 			if (i == player.playerX && j == player.playerY) {
-				level_grid[i][j] = '@';
+				level_grid[i][j] = player.render_char;
+				open_door(i,j);
+			}
+			if (level_grid[i][j] == map_chars["door_open"] && !(level_grid[i-1][j] == player.render_char || level_grid[i][j-1] == player.render_char)) { //close any open doors unless the player is adjacent
+				level_grid[i][j] = map_chars["door"];
 			}
 		}
 	}
 }
+
+function open_door(x, y) { //opens any door adjacent (but not diagonal) to the player
+	var open = function(i,j) {
+		level_grid[i][j] = map_chars["door_open"];
+	}
+	if (level_grid[x][y-1] == map_chars["door"]) 
+		open(x,y-1); //north
+	if (level_grid[x][y+1] == map_chars["door"]) 
+		open(x,y+1); //south
+	if (level_grid[x-1][y] == map_chars["door"]) 
+		open(x-1,y); //west
+	if (level_grid[x+1][y] == map_chars["door"]) 
+		open(x+1,y); //east
+}
+//FOV code
+var light_passes = function(x,y) { //returns true if light passes through a tile
+	if (level_grid[x][y] == map_chars["wall"] || level_grid[x][y] == map_chars["door"]) {
+		return false;
+	}
+	return true;
+}
+var fov = new ROT.FOV.RecursiveShadowcasting(light_passes);
 
 function draw_game() {
 	pen.clearRect(0,0,gameCanvas.width,gameCanvas.height);
@@ -56,7 +80,17 @@ function draw_game() {
 			pen.fillStyle = color_map["default"];
 			if (hasValue(entity_chars,level_grid[i][j])) 
 				pen.fillStyle = color_map[getKey(entity_chars,level_grid[i][j])];
-			pen.fillText(level_grid[i][j],i*pix_width + 10,j*pix_width + 10);
+			//test for FOV
+			if (USE_FOV) {
+				fov.compute(player.playerX,player.playerY,player.vis_radius, function(x, y, r, visibility) {
+					if (x == i && y == j && visibility > 0) {
+						pen.fillText(level_grid[i][j],i*pix_width + 10,j*pix_width + 10);
+					}
+				}); 	
+			}	
+			else {
+				pen.fillText(level_grid[i][j],i*pix_width + 10,j*pix_width + 10);
+			}
 		}
 	}
 }
@@ -67,11 +101,13 @@ function update_draw_entities() {
 	}
 }
 
+//Player code
 function Player() {
 	this.render_char = '@'
 	this.render_color = "rgb(190,110,0)";
 	this.playerX = Math.round(level_width/2);
 	this.playerY = Math.round(level_height/2);
+	this.vis_radius = 100;
 	entity_chars["player"] = this.render_char;
 	color_map["player"] = this.render_color;
 	draw_entities["player"] = [this.playerX,this.playerY];
@@ -120,7 +156,8 @@ function player_input() {
 
 function update_player_pos(xchange,ychange) { //this function checks if the player can move the specified increment and performs the move if true
 	if (level_grid[player.playerX+xchange][player.playerY+ychange] == map_chars["floor"] || 
-			level_grid[player.playerX+xchange][player.playerY+ychange] == map_chars["door"]) {
+			level_grid[player.playerX+xchange][player.playerY+ychange] == map_chars["door"] ||
+			level_grid[player.playerX+xchange][player.playerY+ychange] == map_chars["door_open"]) {
 		level_grid[player.playerX][player.playerY] = render_grid[player.playerX][player.playerY];
 		player.playerX += xchange;
 		player.playerY += ychange;
@@ -157,3 +194,6 @@ function getKey(object, value) {
 	}
 	return undefined;	
 }
+
+run_game(); //run the game loop once to initialize the level
+window.setInterval(player_input(), 1000/FPS); //game loops at 60 fps
