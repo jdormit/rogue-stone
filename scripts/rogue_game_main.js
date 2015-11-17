@@ -9,6 +9,10 @@ var entity_chars = {};
 
 var color_map = {
 	"default":"#BDDEFF",
+	"seen_fog":"#3C46FF",
+//	"background_default":"#1E2138",
+	"background_default":"#000000", //having a different background color looked ugly. Play around with some values here.
+	"background_seen_fog":"#000000"
 };
 var pix_width = 12;
 var font_size = pix_width+"px";
@@ -25,7 +29,7 @@ var pen = gameCanvas.getContext("2d");
 var level_grid = new Array(level_width); for (var i = 0; i < level_grid.length; i++) {level_grid[i] = new Array(level_height);} //level_grid is a 2d array that stores each tile of the level
 
 var dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2));
-var render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
+var render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data, to be used to clear out level_grid when necessary
 grid_copy(render_grid,level_grid);
 
 var player = new Player();
@@ -70,7 +74,14 @@ var light_passes = function(x,y) { //returns true if light passes through a tile
 	return true;
 }
 var fov = new ROT.FOV.RecursiveShadowcasting(light_passes);
+var seen_tiles = new Array(level_grid.length); for (var i = 0; i < seen_tiles.length; i++) {seen_tiles[i] = new Array(level_grid[i].length);} //stores the tiles that the player has seen
+for (var i = 0; i < seen_tiles.length; i++) { //fill seen_tiles with 0's. 0's represent files not seen, 1's are tiles that have been seen
+	for (var j = 0; j < seen_tiles[i].length; j++) {
+		seen_tiles[i][j] = 0;
+	}
+}
 
+//render code
 function draw_game() {
 	pen.clearRect(0,0,gameCanvas.width,gameCanvas.height);
 	update_draw_entities();
@@ -78,17 +89,31 @@ function draw_game() {
 		for (var j = 0; j < level_grid[i].length; j++) {
 			pen.font = font_size + " Arial";
 			pen.fillStyle = color_map["default"];
-			if (hasValue(entity_chars,level_grid[i][j])) 
-				pen.fillStyle = color_map[getKey(entity_chars,level_grid[i][j])];
 			//test for FOV
-			if (USE_FOV) {
+			if (USE_FOV) { //allows generation without FOV for debugging
+				//first render seen but not currently visible tiles
+				if (seen_tiles[i][j] == 1) { //the player has seen the tile before
+					pen.fillStyle = color_map["background_seen_fog"];
+					pen.fillRect(i*pix_width + 10,j*pix_width, pix_width, pix_width);
+					pen.fillStyle = color_map["seen_fog"];
+					pen.fillText(level_grid[i][j],i*pix_width + 10,j*pix_width + 10);
+				}
+				//then render visible tiles
 				fov.compute(player.playerX,player.playerY,player.vis_radius, function(x, y, r, visibility) {
 					if (x == i && y == j && visibility > 0) {
+						pen.fillStyle = color_map["background_default"];
+						pen.fillRect(i*pix_width + 10,j*pix_width, pix_width, pix_width);
+						pen.fillStyle = color_map["default"];
+						if (hasValue(entity_chars,level_grid[i][j])) //color non-terrain entities
+							pen.fillStyle = color_map[getKey(entity_chars,level_grid[i][j])];
 						pen.fillText(level_grid[i][j],i*pix_width + 10,j*pix_width + 10);
+						seen_tiles[i][j] = 1;
 					}
 				}); 	
 			}	
 			else {
+				if (hasValue(entity_chars,level_grid[i][j])) //color non-terrain entities
+					pen.fillStyle = color_map[getKey(entity_chars,level_grid[i][j])];
 				pen.fillText(level_grid[i][j],i*pix_width + 10,j*pix_width + 10);
 			}
 		}
