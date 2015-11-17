@@ -165,16 +165,17 @@ function player_input() {
 		else if (event.keyCode == '34' && player.playerX < level_grid.length - 1 && player.playerY < level_grid[0].length - 1) { //numpad 3
 			update_player_pos(1,1);
 		}
-		else if (event.keyCode == '68' && !DEBUG) { //'d' to enter debug mode
+		else if (event.ctrlKey && event.shiftKey && event.keyCode == '68' && !DEBUG) { //ctrl-shift-d to enter debug mode
 			DEBUG = true;
 			run_game();
 		}
-		else if (event.keyCode == '68' && DEBUG) { //'d' to exit debug mode
+		else if (event.ctrlKey && event.shiftKey && event.keyCode == '68' && DEBUG) { //ctrl-shift-d to exit debug mode
 			DEBUG = false;
 			run_game();
 		}
-		if (DEBUG){ //debuggin keycodes
+		if (DEBUG){ //debugging keycodes
 			if (event.keyCode == '32') { //spacebar to reset the dungeon
+				fill_grid(seen_tiles,0,0,seen_tiles.length,seen_tiles[0].length,0);
 				player.playerX = Math.round(level_width/2);
 				player.playerY = Math.round(level_height/2);
 				draw_entities["player"] = [player.playerX,player.playerY];
@@ -210,6 +211,14 @@ function grid_copy(sourceGrid,destGrid) {
 			for (var j = 0; j < sourceGrid[i].length; j++) {
 				destGrid[i][j] = sourceGrid[i][j];
 			}
+		}
+	}
+}
+
+function fill_grid(grid, x, y, length, width, value) { //fills in a section of grid defined by x,y and length, width with value
+	for (var i = x; i < length; i++) {
+		for (var j = y; j < length; j++) {
+			grid[i][j] = value;
 		}
 	}
 }
