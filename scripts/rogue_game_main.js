@@ -107,6 +107,7 @@ function player_input() {
 		else if (event.keyCode == '32') { //spacebar to reset the dungeon
 			player.playerX = Math.round(level_width/2);
 			player.playerY = Math.round(level_height/2);
+			draw_entities["player"] = [player.playerX,player.playerY];
 			seed = Date.now();
 			dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2));
 			render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
