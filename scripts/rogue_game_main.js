@@ -1,4 +1,4 @@
-var USE_FOV = true;
+var DEBUG = false;
 
 var FPS = 60;
 var seed = Date.now();
@@ -90,7 +90,7 @@ function draw_game() {
 			pen.font = font_size + " Arial";
 			pen.fillStyle = color_map["default"];
 			//test for FOV
-			if (USE_FOV) { //allows generation without FOV for debugging
+			if (!DEBUG) { //allows generation without FOV for debugging
 				//first render seen but not currently visible tiles
 				if (seen_tiles[i][j] == 1) { //the player has seen the tile before
 					pen.fillStyle = color_map["background_seen_fog"];
@@ -165,14 +165,24 @@ function player_input() {
 		else if (event.keyCode == '34' && player.playerX < level_grid.length - 1 && player.playerY < level_grid[0].length - 1) { //numpad 3
 			update_player_pos(1,1);
 		}
-		else if (event.keyCode == '32') { //spacebar to reset the dungeon
-			player.playerX = Math.round(level_width/2);
-			player.playerY = Math.round(level_height/2);
-			draw_entities["player"] = [player.playerX,player.playerY];
-			seed = Date.now();
-			dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2));
-			render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
-			grid_copy(render_grid,level_grid);
+		else if (event.keyCode == '68' && !DEBUG) { //'d' to enter debug mode
+			DEBUG = true;
+			run_game();
+		}
+		else if (event.keyCode == '68' && DEBUG) { //'d' to exit debug mode
+			DEBUG = false;
+			run_game();
+		}
+		if (DEBUG){ //debuggin keycodes
+			if (event.keyCode == '32') { //spacebar to reset the dungeon
+				player.playerX = Math.round(level_width/2);
+				player.playerY = Math.round(level_height/2);
+				draw_entities["player"] = [player.playerX,player.playerY];
+				seed = Date.now();
+				dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2));
+				render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
+				grid_copy(render_grid,level_grid);
+			}
 		}
 		run_game();
 	});
