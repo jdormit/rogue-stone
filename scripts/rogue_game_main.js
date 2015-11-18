@@ -8,6 +8,7 @@ var draw_entities = {}; //stores all entities that must be rendered
 var entity_chars = {};
 
 var color_map = {
+	"debug":"#FF00BE",
 	"default":"#BDDEFF",
 	"seen_fog":"#3C46FF",
 	"background_default":"#000000", //having a different background color looked ugly. Play around with some values here.
@@ -17,10 +18,10 @@ var color_map = {
 	"stairs_default":"#E52C17",
 	"stairs_seen":"#A32011"
 };
-var pix_width = 12;
+var pix_width = 15;
 var font_size = pix_width+"px";
-var canvas_width = 1280;
-var canvas_height = 720;
+var canvas_width = 1600;
+var canvas_height = 900;
 
 var level_width = 100;
 var level_height = 57;
@@ -137,7 +138,7 @@ function draw_game() {
 					}
 				}); 	
 			}	
-			else {
+			else { //DEBUG rendering
 				pen.fillStyle = color_map["background_default"];
 				pen.fillRect(i*pix_width + 10,j*pix_width, pix_width, pix_width);
 				if (level_grid[i][j] == map_chars["door"] || level_grid[i][j] == map_chars["door_open"]) {
@@ -145,6 +146,10 @@ function draw_game() {
 				}
 				else if (level_grid[i][j] == map_chars["stair_down"] || level_grid[i][j] == map_chars["stair_up"]) {
 					pen.fillStyle = color_map["stairs_default"];
+				}
+				else if ((i == 0 && j == 0) || (i == level_grid.length - 1 && j == level_grid[i].length - 1) || //color the corners to test rendering
+						(i == 0 && j == level_grid[i].length - 1) || (i == level_grid.length - 1 && j == 0)) {
+					pen.fillStyle = color_map["debug"];
 				}
 				else
 					pen.fillStyle = color_map["default"];
