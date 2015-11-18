@@ -235,11 +235,13 @@ function dungeon_reset() { //resets the dungeon for debug
 			seen_tiles[i+","+j] = 0;
 		}
 	}
+	current_dungeon_id = 0;
 	player.playerX = Math.round(level_width/2);
 	player.playerY = Math.round(level_height/2);
 	draw_entities["player"] = [player.playerX,player.playerY];
 	seed = prompt("Enter seed:", Date.now());
-	dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),0);
+	dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),current_dungeon_id);
+	dungeon_seed_list[current_dungeon_id] = seed;
 	render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
 	grid_copy(render_grid,level_grid);
 }
