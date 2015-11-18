@@ -216,18 +216,7 @@ function player_input() {
 		}
 		if (DEBUG){ //debugging keycodes
 			if (event.keyCode == '32') { //spacebar to reset the dungeon
-				for (var i = 0; i < level_grid.length; i++) {
-					for (var j = 0; j < level_grid[i].length; j++) {
-						seen_tiles[i+","+j] = 0;
-					}
-				}
-				player.playerX = Math.round(level_width/2);
-				player.playerY = Math.round(level_height/2);
-				draw_entities["player"] = [player.playerX,player.playerY];
-				seed = Date.now();
-				dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),0);
-				render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
-				grid_copy(render_grid,level_grid);
+				dungeon_reset();
 			}
 		}
 		if (level_grid[player.playerX][player.playerY] == map_chars["stair_down"]) {
@@ -240,6 +229,21 @@ function player_input() {
 	});
 }
 
+function dungeon_reset() { //resets the dungeon for debug	
+	for (var i = 0; i < level_grid.length; i++) {
+		for (var j = 0; j < level_grid[i].length; j++) {
+			seen_tiles[i+","+j] = 0;
+		}
+	}
+	player.playerX = Math.round(level_width/2);
+	player.playerY = Math.round(level_height/2);
+	draw_entities["player"] = [player.playerX,player.playerY];
+	seed = prompt("Enter seed:", Date.now());
+	dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),0);
+	render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
+	grid_copy(render_grid,level_grid);
+}
+
 function stairs_down() {
 	if (dungeon_seed_list[current_dungeon_id + 1] == undefined) {
 		seen_tiles_dict[current_dungeon_id] = clone_dictionary(seen_tiles);
@@ -250,7 +254,7 @@ function stairs_down() {
 			}
 		}
 		draw_entities["player"] = [player.playerX,player.playerY];
-		seed = Date.now();
+		seed = next_seed();
 		dungeon_seed_list[current_dungeon_id] = seed;
 		dungeon_level = new DungeonLevel(level_width,level_height,seed,player.playerX,player.playerY,current_dungeon_id);
 		render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
@@ -280,6 +284,10 @@ function stairs_up() {
 	render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
 	grid_copy(render_grid,level_grid);
 	
+}
+
+function next_seed() { //generates a new seed from the old one, ensuring that an entire dungeon can be generated from one seed
+	return ROT.RNG.getNormal(9999999999,9999999999);
 }
 
 function update_player_pos(xchange,ychange) { //this function checks if the player can move the specified increment and performs the move if true
