@@ -10,9 +10,12 @@ var entity_chars = {};
 var color_map = {
 	"default":"#BDDEFF",
 	"seen_fog":"#3C46FF",
-//	"background_default":"#1E2138",
 	"background_default":"#000000", //having a different background color looked ugly. Play around with some values here.
-	"background_seen_fog":"#000000"
+	"background_seen_fog":"#000000",
+	"door_default":"#23DE37",
+	"door_seen":"#156421",
+	"stairs_default":"#E52C17",
+	"stairs_seen":"#A32011"
 };
 var pix_width = 12;
 var font_size = pix_width+"px";
@@ -22,15 +25,23 @@ var canvas_height = 720;
 var level_width = 100;
 var level_height = 57;
 
+var current_dungeon_id = 0; //this stores the id of the current dungeon level
+var dungeon_seed_list = []; //this stores a list of seeds for each dungeon floor, where the index in the list is the dungeon id
+var stairs_up_x_list = []; 
+var stairs_up_y_list = []; //these store the x and y values of the levels' stairs up
+
 var gameCanvas = document.getElementById("game_canvas");
 gameCanvas.width = canvas_width;
 gameCanvas.height = canvas_height;
 var pen = gameCanvas.getContext("2d");
 var level_grid = new Array(level_width); for (var i = 0; i < level_grid.length; i++) {level_grid[i] = new Array(level_height);} //level_grid is a 2d array that stores each tile of the level
 
-var dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2));
+var dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),current_dungeon_id);
 var render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data, to be used to clear out level_grid when necessary
 grid_copy(render_grid,level_grid);
+dungeon_seed_list[current_dungeon_id] = seed;
+stairs_up_x_list[current_dungeon_id] = Math.round(level_width/2);
+stairs_up_y_list[current_dungeon_id] = Math.round(level_height/2);
 
 var player = new Player();
 
@@ -95,7 +106,14 @@ function draw_game() {
 				if (seen_tiles[i][j] == 1) { //the player has seen the tile before
 					pen.fillStyle = color_map["background_seen_fog"];
 					pen.fillRect(i*pix_width + 10,j*pix_width, pix_width, pix_width);
-					pen.fillStyle = color_map["seen_fog"];
+					if (level_grid[i][j] == map_chars["door"] || level_grid[i][j] == map_chars["door_open"]) {
+						pen.fillStyle = color_map["door_seen"];
+					}
+					else if (level_grid[i][j] == map_chars["stairs_down"] || level_grid[i][j] == map_chars["stair_up"]) {
+						pen.fillStyle = color_map["stairs_seen"];
+					}
+					else
+						pen.fillStyle = color_map["seen_fog"];
 					pen.fillText(level_grid[i][j],i*pix_width + 10,j*pix_width + 10);
 				}
 				//then render visible tiles
@@ -103,7 +121,14 @@ function draw_game() {
 					if (x == i && y == j && visibility > 0) {
 						pen.fillStyle = color_map["background_default"];
 						pen.fillRect(i*pix_width + 10,j*pix_width, pix_width, pix_width);
-						pen.fillStyle = color_map["default"];
+						if (level_grid[i][j] == map_chars["door"] || level_grid[i][j] == map_chars["door_open"]) {
+							pen.fillStyle = color_map["door_default"];
+						}
+						else if (level_grid[i][j] == map_chars["stair_down"] || level_grid[i][j] == map_chars["stair_up"]) {
+							pen.fillStyle = color_map["stairs_default"];
+						}
+						else
+							pen.fillStyle = color_map["default"];
 						if (hasValue(entity_chars,level_grid[i][j])) //color non-terrain entities
 							pen.fillStyle = color_map[getKey(entity_chars,level_grid[i][j])];
 						pen.fillText(level_grid[i][j],i*pix_width + 10,j*pix_width + 10);
@@ -112,6 +137,16 @@ function draw_game() {
 				}); 	
 			}	
 			else {
+				pen.fillStyle = color_map["background_default"];
+				pen.fillRect(i*pix_width + 10,j*pix_width, pix_width, pix_width);
+				if (level_grid[i][j] == map_chars["door"] || level_grid[i][j] == map_chars["door_open"]) {
+					pen.fillStyle = color_map["door_default"];
+				}
+				else if (level_grid[i][j] == map_chars["stair_down"] || level_grid[i][j] == map_chars["stair_up"]) {
+					pen.fillStyle = color_map["stairs_default"];
+				}
+				else
+					pen.fillStyle = color_map["default"];
 				if (hasValue(entity_chars,level_grid[i][j])) //color non-terrain entities
 					pen.fillStyle = color_map[getKey(entity_chars,level_grid[i][j])];
 				pen.fillText(level_grid[i][j],i*pix_width + 10,j*pix_width + 10);
@@ -180,21 +215,64 @@ function player_input() {
 				player.playerY = Math.round(level_height/2);
 				draw_entities["player"] = [player.playerX,player.playerY];
 				seed = Date.now();
-				dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2));
+				dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),0);
 				render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
 				grid_copy(render_grid,level_grid);
 			}
+		}
+		if (level_grid[player.playerX][player.playerY] == map_chars["stair_down"]) {
+			stairs_down();
+		}
+		else if (level_grid[player.playerX][player.playerY] == map_chars["stair_up"]) {
+			stairs_up();
 		}
 		run_game();
 	});
 }
 
+function stairs_down() {
+	if (dungeon_seed_list[current_dungeon_id + 1] == undefined) {
+		current_dungeon_id++;
+		fill_grid(seen_tiles,0,0,seen_tiles.length,seen_tiles[0].length,0);
+		draw_entities["player"] = [player.playerX,player.playerY];
+		seed = Date.now();
+		dungeon_seed_list[current_dungeon_id] = seed;
+		dungeon_level = new DungeonLevel(level_width,level_height,seed,player.playerX,player.playerY,current_dungeon_id);
+		render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
+		grid_copy(render_grid,level_grid);
+		stairs_up_x_list[current_dungeon_id] = player.playerX;
+		stairs_up_y_list[current_dungeon_id] = player.playerY;
+	}
+	else {
+		current_dungeon_id++;
+		fill_grid(seen_tiles,0,0,seen_tiles.length,seen_tiles[0].length,0);
+		draw_entities["player"] = [player.playerX,player.playerY];
+		seed = dungeon_seed_list[current_dungeon_id];
+		dungeon_level = new DungeonLevel(level_width,level_height,seed,player.playerX,player.playerY,current_dungeon_id);
+		render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
+		grid_copy(render_grid,level_grid);
+	}
+}
+
+function stairs_up() {
+	current_dungeon_id--;
+	fill_grid(seen_tiles,0,0,seen_tiles.length,seen_tiles[0].length,0);
+	draw_entities["player"] = [player.playerX,player.playerY];
+	seed = dungeon_seed_list[current_dungeon_id];
+	dungeon_level = new DungeonLevel(level_width,level_height,seed,stairs_up_x_list[current_dungeon_id],stairs_up_y_list[current_dungeon_id],current_dungeon_id);
+	render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
+	grid_copy(render_grid,level_grid);
+	
+}
 
 function update_player_pos(xchange,ychange) { //this function checks if the player can move the specified increment and performs the move if true
 	if (level_grid[player.playerX+xchange][player.playerY+ychange] == map_chars["floor"] || 
 			level_grid[player.playerX+xchange][player.playerY+ychange] == map_chars["door"] ||
-			level_grid[player.playerX+xchange][player.playerY+ychange] == map_chars["door_open"]) {
-		level_grid[player.playerX][player.playerY] = render_grid[player.playerX][player.playerY];
+			level_grid[player.playerX+xchange][player.playerY+ychange] == map_chars["door_open"] ||
+			level_grid[player.playerX+xchange][player.playerY+ychange] == map_chars["dungeon_entrance"] ||
+			level_grid[player.playerX+xchange][player.playerY+ychange] == map_chars["stair_down"] ||
+			level_grid[player.playerX+xchange][player.playerY+ychange] == map_chars["stair_up"]) {
+		level_grid[player.playerX][player.playerY] = render_grid[player.playerX][player.playerY]; //clear out the old player character using render_grid
 		player.playerX += xchange;
 		player.playerY += ychange;
 		draw_entities["player"] = [player.playerX,player.playerY];

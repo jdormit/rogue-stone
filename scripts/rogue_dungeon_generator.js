@@ -10,22 +10,26 @@ var map_chars = { //stores the ascii characters used to render the dungeon
 	"wall":'#',
 	"floor":'.',
 	"door":'+',
-	"door_open":'/'
+	"door_open":'/',
+	"stair_down":'<',
+	"stair_up":'>',
+	"dungeon_entrance":'Ω'
 };
 
 var room_index_weights = { //stores the relative weights of generating each room, to be passed to ROT.RNG.getWeightedValue()
 	"1":10,
-	"2":20,
+	"2":30,
 	"3": 1,
 	"4": 2
 };
 
-function DungeonLevel(width, height, seed, initX, initY) {
+function DungeonLevel(width, height, seed, initX, initY, id) {
 	this.width = width;
 	this.height = height;
 	this.seed = seed;
 	this.currentX = initX; //the x coordinate of the first room
 	this.currentY = initY; //the y coordinate of the first room
+	this.id = id;
 	ROT.RNG.setSeed(seed);
 	
 	this.generate_room = function(roomIndex) {
@@ -216,10 +220,56 @@ function DungeonLevel(width, height, seed, initX, initY) {
 			}
 		}
 		
-		door_pass(this.dungeon_grid);
+		door_pass(this.dungeon_grid); //place doors between adjacent rooms
+		if (this.id != 0)
+			place_stairs(this.dungeon_grid,initX,initY,false);
+		else
+			place_stairs(this.dungeon_grid,initX,initY,true);
 	};
 	this.generate_dungeon();
 	
+}
+
+function place_stairs(level_grid,up_x,up_y,is_first_level) { //places stairs, trying to maximize the distance between them
+	//Pathfinding code for place_stairs
+	var passable_comp = function (x,y) {
+		if (level_grid[x][y] == map_chars["wall"]) {
+			return false;
+		}
+		return true;
+	}
+	
+	var astar = new ROT.Path.AStar(up_x,up_y, passable_comp);
+	
+	//now place the stairs up
+	if (is_first_level) {
+		level_grid[up_x][up_y] = map_chars["dungeon_entrance"];
+	}
+	else {
+		level_grid[up_x][up_y] = map_chars["stair_up"];
+	}
+	
+	//now place the stairs down, trying to maximize distance between them
+	var stair_dist = 0; //stores the distance between the stairs as determined by the pathfinding algorithm
+	var down_x = 0;
+	var down_y = 0;
+	for (var i = 0; i < 100; ) {
+		var test_down_x = Math.floor(ROT.RNG.getUniform()*level_grid.length);
+		var test_down_y = Math.floor(ROT.RNG.getUniform()*level_grid[0].length);
+		if (level_grid[test_down_x][test_down_y] == map_chars["floor"]) {
+			var dist = 0;
+			astar.compute(test_down_x,test_down_y, function() {
+				dist++;
+			});
+			if (dist > stair_dist) {
+				stair_dist = dist;
+				down_x = test_down_x;
+				down_y = test_down_y;
+			}
+			i++;
+		}
+	}
+	level_grid[down_x][down_y] = map_chars["stair_down"];
 }
 
 function door_pass(level_grid) { //iterates through the dungeon placing doors between adjacent rooms that don't already have them
