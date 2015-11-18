@@ -135,6 +135,7 @@ function DungeonLevel(width, height, seed, initX, initY, id) {
 		
 		//first place the initial room
 		var current_room = this.generate_room('1');
+		while (!check_room_fit(this.dungeon_grid,current_room,this.currentX,this.currentY)) current_room = this.generate_room('1');
 		grid_merge(current_room,this.dungeon_grid,this.currentX,this.currentY);
 		//now loop through placing additional rooms
 		for (var room_place_tries = 0; room_place_tries < NUM_ATTEMPTS; room_place_tries++) {

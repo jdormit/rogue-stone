@@ -85,12 +85,13 @@ var light_passes = function(x,y) { //returns true if light passes through a tile
 	return true;
 }
 var fov = new ROT.FOV.RecursiveShadowcasting(light_passes);
-var seen_tiles = new Array(level_grid.length); for (var i = 0; i < seen_tiles.length; i++) {seen_tiles[i] = new Array(level_grid[i].length);} //stores the tiles that the player has seen
-for (var i = 0; i < seen_tiles.length; i++) { //fill seen_tiles with 0's. 0's represent files not seen, 1's are tiles that have been seen
-	for (var j = 0; j < seen_tiles[i].length; j++) {
-		seen_tiles[i][j] = 0;
+var seen_tiles = []; //stores the tiles that the player has seen
+for (var i = 0; i < level_grid.length; i++) { //fill seen_tiles with 0's. 0's represent files not seen, 1's are tiles that have been seen
+	for (var j = 0; j < level_grid[i].length; j++) {
+		seen_tiles[i+","+j] = 0;
 	}
 }
+var seen_tiles_dict = []; //stores all the seen_tiles dictionaries, in the form current_dungeon_id:seen_tiles
 
 //render code
 function draw_game() {
@@ -103,7 +104,7 @@ function draw_game() {
 			//test for FOV
 			if (!DEBUG) { //allows generation without FOV for debugging
 				//first render seen but not currently visible tiles
-				if (seen_tiles[i][j] == 1) { //the player has seen the tile before
+				if (seen_tiles[i+","+j] == 1) { //the player has seen the tile before
 					pen.fillStyle = color_map["background_seen_fog"];
 					pen.fillRect(i*pix_width + 10,j*pix_width, pix_width, pix_width);
 					if (level_grid[i][j] == map_chars["door"] || level_grid[i][j] == map_chars["door_open"]) {
@@ -132,7 +133,7 @@ function draw_game() {
 						if (hasValue(entity_chars,level_grid[i][j])) //color non-terrain entities
 							pen.fillStyle = color_map[getKey(entity_chars,level_grid[i][j])];
 						pen.fillText(level_grid[i][j],i*pix_width + 10,j*pix_width + 10);
-						seen_tiles[i][j] = 1;
+						seen_tiles[i+","+j] = 1;
 					}
 				}); 	
 			}	
@@ -210,7 +211,11 @@ function player_input() {
 		}
 		if (DEBUG){ //debugging keycodes
 			if (event.keyCode == '32') { //spacebar to reset the dungeon
-				fill_grid(seen_tiles,0,0,seen_tiles.length,seen_tiles[0].length,0);
+				for (var i = 0; i < level_grid.length; i++) {
+					for (var j = 0; j < level_grid[i].length; j++) {
+						seen_tiles[i+","+j] = 0;
+					}
+				}
 				player.playerX = Math.round(level_width/2);
 				player.playerY = Math.round(level_height/2);
 				draw_entities["player"] = [player.playerX,player.playerY];
@@ -232,8 +237,13 @@ function player_input() {
 
 function stairs_down() {
 	if (dungeon_seed_list[current_dungeon_id + 1] == undefined) {
+		seen_tiles_dict[current_dungeon_id] = clone_dictionary(seen_tiles);
 		current_dungeon_id++;
-		fill_grid(seen_tiles,0,0,seen_tiles.length,seen_tiles[0].length,0);
+		for (var i = 0; i < level_grid.length; i++) {
+			for (var j = 0; j < level_grid[i].length; j++) {
+				seen_tiles[i+","+j] = 0;
+			}
+		}
 		draw_entities["player"] = [player.playerX,player.playerY];
 		seed = Date.now();
 		dungeon_seed_list[current_dungeon_id] = seed;
@@ -244,8 +254,9 @@ function stairs_down() {
 		stairs_up_y_list[current_dungeon_id] = player.playerY;
 	}
 	else {
+		seen_tiles_dict[current_dungeon_id] = clone_dictionary(seen_tiles);
 		current_dungeon_id++;
-		fill_grid(seen_tiles,0,0,seen_tiles.length,seen_tiles[0].length,0);
+		seen_tiles = seen_tiles_dict[current_dungeon_id];
 		draw_entities["player"] = [player.playerX,player.playerY];
 		seed = dungeon_seed_list[current_dungeon_id];
 		dungeon_level = new DungeonLevel(level_width,level_height,seed,player.playerX,player.playerY,current_dungeon_id);
@@ -255,8 +266,9 @@ function stairs_down() {
 }
 
 function stairs_up() {
+	seen_tiles_dict[current_dungeon_id] = clone_dictionary(seen_tiles);
 	current_dungeon_id--;
-	fill_grid(seen_tiles,0,0,seen_tiles.length,seen_tiles[0].length,0);
+	seen_tiles = seen_tiles_dict[current_dungeon_id];
 	draw_entities["player"] = [player.playerX,player.playerY];
 	seed = dungeon_seed_list[current_dungeon_id];
 	dungeon_level = new DungeonLevel(level_width,level_height,seed,stairs_up_x_list[current_dungeon_id],stairs_up_y_list[current_dungeon_id],current_dungeon_id);
@@ -291,6 +303,14 @@ function grid_copy(sourceGrid,destGrid) {
 			}
 		}
 	}
+}
+
+function clone_dictionary(source) {
+	var clone = [];
+	for (var key in source) {
+		clone[key] = source[key];
+	}
+	return clone;
 }
 
 function fill_grid(grid, x, y, length, width, value) { //fills in a section of grid defined by x,y and length, width with value
