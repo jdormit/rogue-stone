@@ -135,7 +135,9 @@ function DungeonLevel(width, height, seed, initX, initY, id) {
 		
 		//first place the initial room
 		var current_room = this.generate_room('1');
-		while (!check_room_fit(this.dungeon_grid,current_room,this.currentX,this.currentY)) current_room = this.generate_room('1');
+		while (!check_room_fit(this.dungeon_grid,current_room,this.currentX,this.currentY)) { 
+			current_room = this.generate_room('1');
+		}
 		grid_merge(current_room,this.dungeon_grid,this.currentX,this.currentY);
 		//now loop through placing additional rooms
 		for (var room_place_tries = 0; room_place_tries < NUM_ATTEMPTS; room_place_tries++) {
@@ -232,6 +234,7 @@ function DungeonLevel(width, height, seed, initX, initY, id) {
 }
 
 function place_stairs(level_grid,up_x,up_y,is_first_level) { //places stairs, trying to maximize the distance between them
+	var down_stairs_padding = 12; //the down stairs must be at least this far from any border
 	//Pathfinding code for place_stairs
 	var passable_comp = function (x,y) {
 		if (level_grid[x][y] == map_chars["wall"]) {
@@ -257,7 +260,9 @@ function place_stairs(level_grid,up_x,up_y,is_first_level) { //places stairs, tr
 	for (var i = 0; i < 100; ) {
 		var test_down_x = Math.floor(ROT.RNG.getUniform()*level_grid.length);
 		var test_down_y = Math.floor(ROT.RNG.getUniform()*level_grid[0].length);
-		if (level_grid[test_down_x][test_down_y] == map_chars["floor"]) {
+		if (level_grid[test_down_x][test_down_y] == map_chars["floor"] && test_down_x < level_grid.length - down_stairs_padding &&
+				test_down_x > down_stairs_padding && test_down_y < level_grid[0].length - down_stairs_padding &&
+				test_down_y > down_stairs_padding) {
 			var dist = 0;
 			astar.compute(test_down_x,test_down_y, function() {
 				dist++;

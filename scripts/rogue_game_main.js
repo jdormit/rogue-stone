@@ -235,11 +235,13 @@ function dungeon_reset() { //resets the dungeon for debug
 			seen_tiles[i+","+j] = 0;
 		}
 	}
+	seen_tiles_dict.length = 0;
+	dungeon_seed_list.length = 0;
 	current_dungeon_id = 0;
 	player.playerX = Math.round(level_width/2);
 	player.playerY = Math.round(level_height/2);
 	draw_entities["player"] = [player.playerX,player.playerY];
-	seed = prompt("Enter seed:", Date.now());
+	seed = makeSeed(prompt("Enter seed:", Date.now()));
 	dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),current_dungeon_id);
 	dungeon_seed_list[current_dungeon_id] = seed;
 	render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
@@ -247,6 +249,7 @@ function dungeon_reset() { //resets the dungeon for debug
 }
 
 function stairs_down() {
+	console.log(dungeon_seed_list[current_dungeon_id + 1]);
 	if (dungeon_seed_list[current_dungeon_id + 1] == undefined) {
 		seen_tiles_dict[current_dungeon_id] = clone_dictionary(seen_tiles);
 		current_dungeon_id++;
@@ -350,6 +353,18 @@ function getKey(object, value) {
 			return item;
 	}
 	return undefined;	
+}
+
+function makeSeed(value) {
+	console.log (parseInt(value));
+	var seed = 0;
+	if (isNaN(parseInt(value))) {
+		for (var i = 0; i < value.length; i++) {
+			seed += value.charCodeAt(i);
+		}
+	}
+	else seed = value;
+	return seed;
 }
 
 run_game(); //run the game loop once to initialize the level
