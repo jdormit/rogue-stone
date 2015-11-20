@@ -1,5 +1,8 @@
 var DEBUG = false;
 
+var multiplayer = (sessionStorage.multiplayer == "true");
+if (multiplayer) console.log("multiplayer game");
+
 var FPS = 60;
 var seed = Date.now();
 

@@ -1,16 +1,52 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<link rel="stylesheet" type="text/css" href="rogue_style.css">
-		<meta charset="utf-8">
-		<title>A Little Rogue-Like</title>
-		<script type="text/javascript" charset="utf-8" src="scripts/rot.js"> </script>
-		<script type="text/javascript" charset="utf-8" src="scripts/rogue_dungeon_generator.js"></script>
-		<canvas id="game_canvas" width="1024" height="768">Your browser does not support HTML5, please try a different browser.</canvas>
-		<script id = "game" type="text/javascript" charset="utf-8" src="scripts/rogue_game_main.js"> </script>
+		<title>RogueStone</title>
+		<link rel="stylesheet" type="text/css" href="title.css">
+		<script type="text/javascript" charset="utf-8" src="scripts/global_vars.js"></script>
+		<script type="text/javascript">
+			window.addEventListener("keydown", function(event) {
+				if (event.keyCode == 83) { //'S'
+					sessionStorage.setItem("multiplayer",false);
+					location.assign("roguestone_game.html");
+				}
+				else if (event.keyCode == 77) { //'M'
+					sessionStorage.setItem("multiplayer",true);
+					location.assign("roguestone_game.html");
+				}
+			});
+		</script>
 	</head>
-	
 	<body>
-
+		<pre id="title">                                                                                                                                                                                            
+                                                                                                                                                                                           
+RRRRRRRRRRRRRRRRR                                                                                SSSSSSSSSSSSSSS      tttt                                                                 
+R::::::::::::::::R                                                                             SS:::::::::::::::S  ttt:::t                                                                 
+R::::::RRRRRR:::::R                                                                           S:::::SSSSSS::::::S  t:::::t                                                                 
+RR:::::R     R:::::R                                                                          S:::::S     SSSSSSS  t:::::t                                                                 
+  R::::R     R:::::R   ooooooooooo      ggggggggg   ggggguuuuuu    uuuuuu      eeeeeeeeeeee   S:::::S        ttttttt:::::ttttttt       ooooooooooo   nnnn  nnnnnnnn        eeeeeeeeeeee    
+  R::::R     R:::::R oo:::::::::::oo   g:::::::::ggg::::gu::::u    u::::u    ee::::::::::::ee S:::::S        t:::::::::::::::::t     oo:::::::::::oo n:::nn::::::::nn    ee::::::::::::ee  
+  R::::RRRRRR:::::R o:::::::::::::::o g:::::::::::::::::gu::::u    u::::u   e::::::eeeee:::::eeS::::SSSS     t:::::::::::::::::t    o:::::::::::::::on::::::::::::::nn  e::::::eeeee:::::ee
+  R:::::::::::::RR  o:::::ooooo:::::og::::::ggggg::::::ggu::::u    u::::u  e::::::e     e:::::e SS::::::SSSSStttttt:::::::tttttt    o:::::ooooo:::::onn:::::::::::::::ne::::::e     e:::::e
+  R::::RRRRRR:::::R o::::o     o::::og:::::g     g:::::g u::::u    u::::u  e:::::::eeeee::::::e   SSS::::::::SS    t:::::t          o::::o     o::::o  n:::::nnnn:::::ne:::::::eeeee::::::e
+  R::::R     R:::::Ro::::o     o::::og:::::g     g:::::g u::::u    u::::u  e:::::::::::::::::e       SSSSSS::::S   t:::::t          o::::o     o::::o  n::::n    n::::ne:::::::::::::::::e 
+  R::::R     R:::::Ro::::o     o::::og:::::g     g:::::g u::::u    u::::u  e::::::eeeeeeeeeee             S:::::S  t:::::t          o::::o     o::::o  n::::n    n::::ne::::::eeeeeeeeeee  
+  R::::R     R:::::Ro::::o     o::::og::::::g    g:::::g u:::::uuuu:::::u  e:::::::e                      S:::::S  t:::::t    tttttto::::o     o::::o  n::::n    n::::ne:::::::e           
+RR:::::R     R:::::Ro:::::ooooo:::::og:::::::ggggg:::::g u:::::::::::::::uue::::::::e         SSSSSSS     S:::::S  t::::::tttt:::::to:::::ooooo:::::o  n::::n    n::::ne::::::::e          
+R::::::R     R:::::Ro:::::::::::::::o g::::::::::::::::g  u:::::::::::::::u e::::::::eeeeeeee S::::::SSSSSS:::::S  tt::::::::::::::to:::::::::::::::o  n::::n    n::::n e::::::::eeeeeeee  
+R::::::R     R:::::R oo:::::::::::oo   gg::::::::::::::g   uu::::::::uu:::u  ee:::::::::::::e S:::::::::::::::SS     tt:::::::::::tt oo:::::::::::oo   n::::n    n::::n  ee:::::::::::::e  
+RRRRRRRR     RRRRRRR   ooooooooooo       gggggggg::::::g     uuuuuuuu  uuuu    eeeeeeeeeeeeee  SSSSSSSSSSSSSSS         ttttttttttt     ooooooooooo     nnnnnn    nnnnnn    eeeeeeeeeeeeee  
+                                                 g:::::g                                                                                                                                   
+                                     gggggg      g:::::g                                                                                                                                   
+                                     g:::::gg   gg:::::g                                                                                                                                   
+                                      g::::::ggg:::::::g                                                                                                                                   
+                                       gg:::::::::::::g                                                                                                                                    
+                                         ggg::::::ggg                                                                                                                                      
+                                            gggggg                                                                                                                                         
+		</pre>
+		<div id="menu">
+			<h1>&lt;S&gt;ingle Player</h1>
+			<h1>&lt;M&gt;ultiplayer</h1>
+		</div>
 	</body>
 </html>
