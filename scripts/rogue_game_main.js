@@ -252,7 +252,6 @@ function dungeon_reset() { //resets the dungeon for debug
 }
 
 function stairs_down() {
-	console.log(dungeon_seed_list[current_dungeon_id + 1]);
 	if (dungeon_seed_list[current_dungeon_id + 1] == undefined) {
 		seen_tiles_dict[current_dungeon_id] = clone_dictionary(seen_tiles);
 		current_dungeon_id++;
@@ -359,7 +358,6 @@ function getKey(object, value) {
 }
 
 function makeSeed(value) {
-	console.log (parseInt(value));
 	var seed = 0;
 	if (isNaN(parseInt(value))) {
 		for (var i = 0; i < value.length; i++) {
