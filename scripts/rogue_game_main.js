@@ -1,7 +1,11 @@
 var DEBUG = false;
 
 var multiplayer = (sessionStorage.multiplayer == "true");
-if (multiplayer) console.log("multiplayer game");
+if (multiplayer) { //if multiplayer load socket.io
+//	var script = document.createElement('script');
+//	script.src = '/socket.io/socket.io.js';
+//	$('head').append(script);
+}
 
 var FPS = 60;
 var seed = Date.now();
