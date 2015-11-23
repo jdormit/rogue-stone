@@ -1,0 +1,47 @@
+body {
+	font-family: "Courier New", monospace;
+	background-color: #000000;
+	color: #BDDEFF;
+}
+
+#lobby {
+	margin-left: 20%;
+}
+
+#game_list {
+	font-size: 18px;
+}
+
+table, td {
+	border: 1px solid;
+}
+
+th {
+	border-right: 1px solid;
+	border-left: 1px solid;
+}
+
+#menu {
+	margin-top: 10%;
+	margin-left: 20%;
+}
+
+#input_form {
+	margin-top: 2.5%;
+	margin-left:20%
+}
+
+#game_id {
+	color: #BDDEFF;
+	background-color: #000000;
+	border:none;
+	display:none;
+}
+
+#game_id:focus {
+	outline:none;
+}
+
+#message_box {
+	margin-left:20%;
+}

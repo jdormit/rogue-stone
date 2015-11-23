@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>RogueStone Lobby</title>
+		<link rel="stylesheet" type="text/css" href="lobby_style.css">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+		<script src="https://cdn.socket.io/socket.io-1.0.0.js"></script>
+		<script>
+			var canInput = true;
+			var url = "http://localhost:8080/"
+			var socket = io.connect(url);
+			var game_id_list = [];
+			var game_player_list = {};
+			var username;
+			
+			socket.on('connect', function () {
+				username = prompt("Choose a username.");
+				socket.emit('join_lobby', username);
+			});
+			
+			socket.on('update_game_list', function (player_game_list) {
+				console.log('player list updated');
+				game_player_list = {};
+				game_player_list = $.extend(true, {}, player_game_list);
+				update_available_games();
+			});
+			
+			function update_available_games() {
+				$(document).ready(function() {
+					$('#game_list').empty();
+					$('#game_list').append("<th>Game Name</th>")
+					$('#game_list').append("<th>Players</th>")
+					for (var game in game_player_list) {
+						var new_row = $("<tr>");
+						var game_name = game;
+						var players = "";
+						for (var i = 0; i < game_player_list[game].length; i++) {
+						players = players.concat(game_player_list[game][i] + ", ");
+						}
+						players = players.slice(0, players.length - 2); //delete the last ','
+						new_row.append("<td>" + game_name + "</td>");
+						new_row.append("<td>" + players + "</td>");
+						new_row.append("</tr>");
+						$('#game_list').append(new_row);
+					}
+				});
+			}
+			
+			$(document).ready(function() {
+				var newGame = false;
+				window.addEventListener('keydown', function (event) {
+					if (event.keyCode == '78' && canInput) {//'N'
+						newGame = true;
+						canInput = false;
+						$('#game_id').show();
+						$('#input_form').prepend("Enter a unique game name: ");
+						$('#game_id').show();
+						setTimeout(function() {$('#game_id').focus();}, 1); //timeout to ensure user input doesn't end up in text field
+					}
+					else if (event.keyCode == '74' && canInput) { //'J'
+						canInput = false;
+						$('#game_id').show();
+						$('#input_form').prepend("Enter the name of the game you would like to join: ");
+						$('#game_id').show();
+						setTimeout(function() {$('#game_id').focus();}, 1); //timeout to ensure user input doesn't end up in text field
+					}
+					else if (event.keyCode == '66' && canInput) { //'B'
+						location.replace('index.html');
+					}
+				});
+				$('#input_form').submit(function(event) {
+					event.preventDefault();
+					if (newGame) {
+						var game_name = $('#game_id').val();
+						var game_data = [username, game_name];
+						socket.emit('game_init', game_data);
+						sessionStorage.setItem("game_id", game_name);
+						location.replace('roguestone_game.html');
+					}
+					else {
+						var valid_name = false;
+						for (var game in game_player_list) {
+							if (game == $('#game_id').val()) valid_name = true;
+						}
+						if (valid_name) {
+							$('#message_box').text("");
+							var game_name = $('#game_id').val();
+							var join_data = [username, game_name];
+							socket.emit('join_game', join_data);
+						}
+						else {
+							$('#message_box').text("INVALID GAME NAME\n");
+						}
+					}
+				});
+			});
+
+		</script>
+	</head>
+	<body>
+		<div id='lobby'>
+			<h1>AVAILABLE GAMES</h1>
+				<table id='game_list'>
+					<th>Game Name</th>
+					<th>Players</th>
+				</table>
+		</div>
+		<div id ='menu'>
+			<h2>&lt;N&gt;ew Game</h2>
+			<h2>&lt;J&gt;oin Game</h2>
+			<h2>&lt;B&gt;ack</h2>
+		</div>
+		<form id='input_form'>
+			<input type='text' autocomplete='off' name='game_id' id='game_id'/>
+		</form>
+		<div id='message_box'></div>
+	</body>
+</html>
