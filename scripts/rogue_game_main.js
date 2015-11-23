@@ -9,7 +9,7 @@ if (multiplayer) { //if multiplayer load socket.io
 	// script.src = '"https://cdn.socket.io/socket.io-1.0.0.js"';
 	// $('head').append(script);
 	game_id = sessionStorage.game_id;
-	var url = "http://localhost:8080";
+	var url = "https://roguestone-server.herokuapp.com/";
 	socket = io.connect(url);
 }
 
