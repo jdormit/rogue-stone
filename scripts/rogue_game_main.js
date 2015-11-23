@@ -143,8 +143,8 @@ function calculate_level() {
 			for (var i = 0; i<level_grid.length; i++) {
 				for (var j = 0; j<level_grid[0].length; j++) {
 					for (var entity in entities) {
-						if (entity.indexOf("player") != -1 && i == entities[entity[0]] && j == entities[entity[1]]) {
-							level_grid[i][j] = player.render_char;
+						if (entity.indexOf("player") != -1 && i == entities[entity][0] && j == entities[entity][1]) {
+							level_grid[i][j] = entity_chars[entity];
 							open_door(i,j);
 						}
 					}
@@ -163,7 +163,7 @@ function calculate_level() {
 		for (var i = 0; i<level_grid.length; i++) {
 			for (var j = 0; j<level_grid[0].length; j++) {
 				for (var entity in entities) {
-					if (entity.indexOf("player") != -1 && i == entities[entity[0]] && j == entities[entity[1]]) {
+					if (entity.indexOf("player") != -1 && i == entities[entity][0] && j == entities[entity][1]) {
 						level_grid[i][j] = player.render_char;
 						open_door(i,j);
 					}
