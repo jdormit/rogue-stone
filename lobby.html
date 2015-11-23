@@ -75,6 +75,7 @@
 						var game_data = [username, game_name];
 						socket.emit('game_init', game_data);
 						sessionStorage.setItem("game_id", game_name);
+						sessionStorage.setItem("host", true);
 						location.replace('roguestone_game.html');
 					}
 					else {
@@ -87,6 +88,9 @@
 							var game_name = $('#game_id').val();
 							var join_data = [username, game_name];
 							socket.emit('join_game', join_data);
+							sessionStorage.setItem("game_id", game_name);
+							sessionStorage.setItem("host", false);
+							location.replace('roguestone_game.html');
 						}
 						else {
 							$('#message_box').text("INVALID GAME NAME\n");

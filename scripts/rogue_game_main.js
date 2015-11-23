@@ -1,103 +1,179 @@
-$(document).ready(function() {
-	var DEBUG = false;
+var DEBUG = false;
 
-	var multiplayer = (sessionStorage.multiplayer == "true");
+var multiplayer = (sessionStorage.multiplayer == "true");
 
-	var game_id;
-	if (multiplayer) { //if multiplayer load socket.io
-		var script = document.createElement('script');
-		script.src = '"https://cdn.socket.io/socket.io-1.0.0.js"';
-		$('head').append(script);
+var game_id;
+var socket;
+if (multiplayer) { //if multiplayer load socket.io
+	// var script = document.createElement('script');
+	// script.src = '"https://cdn.socket.io/socket.io-1.0.0.js"';
+	// $('head').append(script);
 	game_id = sessionStorage.game_id;
+	var url = "http://localhost:8080";
+	socket = io.connect(url);
+}
+
+var FPS = 60;
+var seed = Date.now();
+
+var entities = {}; //stores all entities that must be rendered
+
+var entity_chars = {};
+
+var color_map = {
+	"debug":"#FF00BE",
+	"default":"#BDDEFF",
+	"seen_fog":"#3C46FF",
+	"background_default":"#000000", //having a different background color looked ugly. Play around with some values here.
+	"background_seen_fog":"#000000",
+	"door_default":"#23DE37",
+	"door_seen":"#156421",
+	"stairs_default":"#E52C17",
+	"stairs_seen":"#A32011"
+};
+var pix_width = 15;
+var font_size = pix_width+"px";
+var canvas_width = 1600;
+var canvas_height = 900;
+
+var level_width = 100;
+var level_height = 57;
+
+var current_dungeon_id = 0; //this stores the id of the current dungeon level
+var dungeon_seed_list = []; //this stores a list of seeds for each dungeon floor, where the index in the list is the dungeon id
+var stairs_up_x_list = []; 
+var stairs_up_y_list = []; //these store the x and y values of the levels' stairs up
+
+var gameCanvas = document.getElementById('game_canvas');
+gameCanvas.width = canvas_width;
+gameCanvas.height = canvas_height;
+var pen = gameCanvas.getContext("2d");
+var level_grid = new Array(level_width); for (var i = 0; i < level_grid.length; i++) {level_grid[i] = new Array(level_height);} //level_grid is a 2d array that stores each tile of the level
+
+//FOV code
+var light_passes = function(x,y) { //returns true if light passes through a tile
+	if (level_grid[x][y] == map_chars["wall"] || level_grid[x][y] == map_chars["door"]) {
+		return false;
 	}
+	return true;
+}
+var fov = new ROT.FOV.RecursiveShadowcasting(light_passes);
+var seen_tiles = []; //stores the tiles that the player has seen
+for (var i = 0; i < level_grid.length; i++) { //fill seen_tiles with 0's. 0's represent files not seen, 1's are tiles that have been seen
+	for (var j = 0; j < level_grid[i].length; j++) {
+		seen_tiles[i+","+j] = 0;
+	}
+}
+var seen_tiles_dict = []; //stores all the seen_tiles dictionaries, in the form current_dungeon_id:seen_tiles
 
-	var FPS = 60;
-	var seed = Date.now();
+var dungeon_level,render_grid;
 
-	var draw_entities = {}; //stores all entities that must be rendered
+var player;
 
-	var entity_chars = {};
+if (multiplayer) {
+//multiplayer set-up
+	if (sessionStorage.host == 'true') {
+		socket.emit('host_setup', [seed,game_id]);
+		dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),current_dungeon_id);
+		render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data, to be used to clear out level_grid when necessary
+		grid_copy(render_grid,level_grid);
+		dungeon_seed_list[current_dungeon_id] = seed;
+		stairs_up_x_list[current_dungeon_id] = Math.round(level_width/2);
+		stairs_up_y_list[current_dungeon_id] = Math.round(level_height/2);
+		player = new Player();
+		run_game(); //run the game loop once to initialize the level
+		window.setInterval(player_input(), 1000/FPS); //game loops at 60 fps
+	}
+	else socket.emit('join_game_request', game_id);
+	socket.on('join_game', function(data) {
+		seed = data[game_id].seed;
+		dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),current_dungeon_id);
+		render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data, to be used to clear out level_grid when necessary
+		grid_copy(render_grid,level_grid);
+		dungeon_seed_list[current_dungeon_id] = seed;
+		stairs_up_x_list[current_dungeon_id] = Math.round(level_width/2);
+		stairs_up_y_list[current_dungeon_id] = Math.round(level_height/2);
+		socket.on('update_entities_on_join', function(updated_entities) { //do not generate player or run game until entities has been recieved from the server
+			entities = {};
+			entities = $.extend({}, updated_entities.data[0][game_id]);
+			entity_chars = {};
+			entity_chars = $.extend({}, updated_entities.data[1][game_id]);
+			color_map = {};
+			color_map = $.extend({}, updated_entities.data[3][game_id]);
+		
+			player = new Player();
+			run_game(); //run the game loop once to initialize the level
+			window.setInterval(player_input(), 1000/FPS); //game loops at 60 fps
+		});
+	});
+}
 
-	var color_map = {
-		"debug":"#FF00BE",
-		"default":"#BDDEFF",
-		"seen_fog":"#3C46FF",
-		"background_default":"#000000", //having a different background color looked ugly. Play around with some values here.
-		"background_seen_fog":"#000000",
-		"door_default":"#23DE37",
-		"door_seen":"#156421",
-		"stairs_default":"#E52C17",
-		"stairs_seen":"#A32011"
-	};
-	var pix_width = 15;
-	var font_size = pix_width+"px";
-	var canvas_width = 1600;
-	var canvas_height = 900;
-
-	var level_width = 100;
-	var level_height = 57;
-
-	var current_dungeon_id = 0; //this stores the id of the current dungeon level
-	var dungeon_seed_list = []; //this stores a list of seeds for each dungeon floor, where the index in the list is the dungeon id
-	var stairs_up_x_list = []; 
-	var stairs_up_y_list = []; //these store the x and y values of the levels' stairs up
-
-	var canvas = $('<canvas id="game_canvas" width="'+canvas_width+'" height="'+canvas_height+'">Your browser does not support HTML5, please try a different browser.</canvas>');
-	// gameCanvas.width = canvas_width;
-	// gameCanvas.height = canvas_height;
-	$('head').prepend(canvas);
-	var gameCanvas = document.getElementById('game_canvas');
-	var pen = gameCanvas.getContext("2d");
-	var level_grid = new Array(level_width); for (var i = 0; i < level_grid.length; i++) {level_grid[i] = new Array(level_height);} //level_grid is a 2d array that stores each tile of the level
-
-	var dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),current_dungeon_id);
-	var render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data, to be used to clear out level_grid when necessary
+if (!multiplayer) {
+	dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),current_dungeon_id);
+	render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data, to be used to clear out level_grid when necessary
 	grid_copy(render_grid,level_grid);
 	dungeon_seed_list[current_dungeon_id] = seed;
 	stairs_up_x_list[current_dungeon_id] = Math.round(level_width/2);
 	stairs_up_y_list[current_dungeon_id] = Math.round(level_height/2);
-
-	var player = new Player();
-	
-	//FOV code
-	var light_passes = function(x,y) { //returns true if light passes through a tile
-		if (level_grid[x][y] == map_chars["wall"] || level_grid[x][y] == map_chars["door"]) {
-			return false;
-		}
-		return true;
-	}
-	var fov = new ROT.FOV.RecursiveShadowcasting(light_passes);
-	var seen_tiles = []; //stores the tiles that the player has seen
-	for (var i = 0; i < level_grid.length; i++) { //fill seen_tiles with 0's. 0's represent files not seen, 1's are tiles that have been seen
-		for (var j = 0; j < level_grid[i].length; j++) {
-			seen_tiles[i+","+j] = 0;
-		}
-	}
-	var seen_tiles_dict = []; //stores all the seen_tiles dictionaries, in the form current_dungeon_id:seen_tiles
-	
+	player = new Player();	
 	run_game(); //run the game loop once to initialize the level
 	window.setInterval(player_input(), 1000/FPS); //game loops at 60 fps
-});
+}
 
-function run_game() { //the main game loop, runs whenever the player makes a move
+function run_game() { //the main game loop
 	calculate_level();
-	draw_game();
 }
 
 function calculate_level() {
-	for (var i = 0; i<level_grid.length; i++) {
-		for (var j = 0; j<level_grid[0].length; j++) {
-			if (i == player.playerX && j == player.playerY) {
-				level_grid[i][j] = player.render_char;
-				open_door(i,j);
+	//then update entities, to be rendered in draw_game
+	if (multiplayer) {
+		socket.emit('update_server_entities', [entities, entity_chars, game_id, color_map]); //send updated entities back to the server
+		socket.on('update_client_entities', function(updated_entities) {
+			for (var entity in entities) {
+				level_grid[entities[entity][0]][entities[entity][1]] = render_grid[entities[entity][0]][entities[entity][1]];
 			}
-			if (level_grid[i][j] == map_chars["door_open"] && !(level_grid[i-1][j] == player.render_char || level_grid[i][j-1] == player.render_char)) { //close any open doors unless the player is adjacent
-				level_grid[i][j] = map_chars["door"];
+			if (updated_entities.data[2] == game_id) {
+				entities = {};
+				entities = $.extend({}, updated_entities.data[0][game_id]);
+				entity_chars = {};
+				entity_chars = $.extend({}, updated_entities.data[1][game_id]);
+				color_map = {};
+				color_map = $.extend({}, updated_entities.data[3][game_id]);
+			}
+			for (var i = 0; i<level_grid.length; i++) {
+				for (var j = 0; j<level_grid[0].length; j++) {
+					for (var entity in entities) {
+						if (entity.indexOf("player") != -1 && i == entities[entity[0]] && j == entities[entity[1]]) {
+							level_grid[i][j] = player.render_char;
+							open_door(i,j);
+						}
+					}
+					if (level_grid[i][j] == map_chars["door_open"] && !(level_grid[i-1][j] == player.render_char || level_grid[i][j-1] == player.render_char)) { //close any open doors unless the player is adjacent
+						level_grid[i][j] = map_chars["door"];
+					}
+				}
+			}
+			draw_game(); //draw game when entities are updated from server
+		});
+	}
+	else {
+		for (var entity in entities) {
+			level_grid[entities[entity][0]][entities[entity][1]] = render_grid[entities[entity][0]][entities[entity][1]];
+		}
+		for (var i = 0; i<level_grid.length; i++) {
+			for (var j = 0; j<level_grid[0].length; j++) {
+				for (var entity in entities) {
+					if (entity.indexOf("player") != -1 && i == entities[entity[0]] && j == entities[entity[1]]) {
+						level_grid[i][j] = player.render_char;
+						open_door(i,j);
+					}
+				}
+				if (level_grid[i][j] == map_chars["door_open"] && !(level_grid[i-1][j] == player.render_char || level_grid[i][j-1] == player.render_char)) { //close any open doors unless the player is adjacent
+					level_grid[i][j] = map_chars["door"];
+				}
 			}
 		}
-	}
-	if (DEBUG) {
-		update_draw_entities();
+		draw_game();
 	}
 }
 
@@ -141,9 +217,9 @@ function draw_game() {
 				//then render visible tiles
 				fov.compute(player.playerX,player.playerY,player.vis_radius, function(x, y, r, visibility) {
 					if (x == i && y == j && visibility > 0) {
-						for (var entity in draw_entities) {
-							if (draw_entities[entity][0] == i && draw_entities[entity][1] == j && draw_entities[entity][2] == current_dungeon_id)	//only render entities if they are visible
-								level_grid[draw_entities[entity][0]][draw_entities[entity][1]] = entity_chars[entity]; 
+						for (var entity in entities) {
+							if (entities[entity][0] == i && entities[entity][1] == j && entities[entity][2] == current_dungeon_id)	//only render entities if they are visible
+								level_grid[entities[entity][0]][entities[entity][1]] = entity_chars[entity]; 
 						}
 						pen.fillStyle = color_map["background_default"];
 						pen.fillRect(i*pix_width + 10,j*pix_width, pix_width, pix_width);
@@ -187,30 +263,45 @@ function draw_game() {
 }
 
 function update_draw_entities() { //only used for debug rendering
-	for (var entity in draw_entities) {
-		if (draw_entities[entity][2] == current_dungeon_id) {
-			level_grid[draw_entities[entity][0]][draw_entities[entity][1]] = entity_chars[entity]; 
+	for (var entity in entities) {
+		if (entities[entity][2] == current_dungeon_id) {
+			level_grid[entities[entity][0]][entities[entity][1]] = entity_chars[entity]; 
 		}
 	}
 }
 
 //Player code
 function Player() {
+	this.name = calcName();
 	this.render_char = '@'
 	this.render_color = "rgb(190,110,0)";
 	this.playerX = Math.round(level_width/2);
 	this.playerY = Math.round(level_height/2);
 	this.playerX = find_start_location(this.playerX, this.playerY);
 	this.vis_radius = 100;
-	entity_chars["player"] = this.render_char;
-	color_map["player"] = this.render_color;
-	draw_entities["player"] = [this.playerX,this.playerY,current_dungeon_id];
+	entity_chars[this.name] = this.render_char;
+	color_map[this.name] = this.render_color;
+	entities[this.name] = [this.playerX,this.playerY,current_dungeon_id];
 	
 	function find_start_location(x, y) { //find the start location in case of multiplayer game
-		while (level_grid[x][y] == entity_chars["player"]) {
-			x += 1;
+		var testX = x;
+		var testY = y;
+		for (var entity in entities) {
+			if (entities[entity][2] == current_dungeon_id && entities[entity][0] == testX && entities[entity][1] == testY) {
+				testX += 1;
+			}
 		}
-		return x;
+		return testX;
+	}
+	
+	function calcName() {
+		var num = 0;
+		var name = "player"+num;
+		while (entities[name] != undefined) {
+			num++;
+			name = "player"+num;
+		}
+		return name;
 	}
 }
 
@@ -275,7 +366,7 @@ function dungeon_reset() { //resets the dungeon for debug
 	current_dungeon_id = 0;
 	player.playerX = Math.round(level_width/2);
 	player.playerY = Math.round(level_height/2);
-	draw_entities["player"] = [player.playerX,player.playerY,current_dungeon_id];
+	entities[player.name] = [player.playerX,player.playerY,current_dungeon_id];
 	seed = makeSeed(prompt("Enter seed:", Date.now()));
 	dungeon_level = new DungeonLevel(level_width,level_height,seed,Math.round(level_width/2),Math.round(level_height/2),current_dungeon_id);
 	dungeon_seed_list[current_dungeon_id] = seed;
@@ -292,7 +383,7 @@ function stairs_down() {
 				seen_tiles[i+","+j] = 0;
 			}
 		}
-		draw_entities["player"] = [player.playerX,player.playerY,current_dungeon_id];
+		entities[player.name] = [player.playerX,player.playerY,current_dungeon_id];
 		seed = next_seed();
 		dungeon_seed_list[current_dungeon_id] = seed;
 		dungeon_level = new DungeonLevel(level_width,level_height,seed,player.playerX,player.playerY,current_dungeon_id);
@@ -305,7 +396,7 @@ function stairs_down() {
 		seen_tiles_dict[current_dungeon_id] = clone_dictionary(seen_tiles);
 		current_dungeon_id++;
 		seen_tiles = seen_tiles_dict[current_dungeon_id];
-		draw_entities["player"] = [player.playerX,player.playerY,current_dungeon_id];
+		entities[player.name] = [player.playerX,player.playerY,current_dungeon_id];
 		seed = dungeon_seed_list[current_dungeon_id];
 		dungeon_level = new DungeonLevel(level_width,level_height,seed,player.playerX,player.playerY,current_dungeon_id);
 		render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
@@ -317,7 +408,7 @@ function stairs_up() {
 	seen_tiles_dict[current_dungeon_id] = clone_dictionary(seen_tiles);
 	current_dungeon_id--;
 	seen_tiles = seen_tiles_dict[current_dungeon_id];
-	draw_entities["player"] = [player.playerX,player.playerY,current_dungeon_id];
+	entities[player.name] = [player.playerX,player.playerY,current_dungeon_id];
 	seed = dungeon_seed_list[current_dungeon_id];
 	dungeon_level = new DungeonLevel(level_width,level_height,seed,stairs_up_x_list[current_dungeon_id],stairs_up_y_list[current_dungeon_id],current_dungeon_id);
 	render_grid = dungeon_level.dungeon_grid; //render_grid stores the raw terrain data
@@ -339,7 +430,7 @@ function update_player_pos(xchange,ychange) { //this function checks if the play
 		level_grid[player.playerX][player.playerY] = render_grid[player.playerX][player.playerY]; //clear out the old player character using render_grid
 		player.playerX += xchange;
 		player.playerY += ychange;
-		draw_entities["player"] = [player.playerX,player.playerY,current_dungeon_id];
+		entities[player.name] = [player.playerX,player.playerY,current_dungeon_id];
 	}
 }
 
